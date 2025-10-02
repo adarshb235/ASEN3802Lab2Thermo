@@ -1,4 +1,4 @@
-function [FinalData] = filereadin() 
+function [FinalData, namingVec] = filereadin() 
 
     a=dir('*mA');
 
@@ -18,6 +18,9 @@ function [FinalData] = filereadin()
         ampval= strsplit(b{3},'mA'); % amps are always in the third portion
         volts(i) = str2num(v{1}); % convert string to number (vector)
         amps(i) = str2num(ampval{1});
+
+        A = convertCharsToStrings(b);
+        namingVec(:, i) = A'; 
         
 
         % Store the data from each column into corresponding variables
@@ -33,7 +36,7 @@ function [FinalData] = filereadin()
       
 
     end
-
+ 
 end
 
 
