@@ -56,9 +56,21 @@ function compare(case_x);
 case_x.T_steady = mean([case_x.T_sense(322:342, :)] , 1);
 T_sense_position = linspace(1.375, 1.375 + 1.27 * 7, 8);
 P = polyfit(T_sense_position, case_x.T_steady,1);
-
 figure();
-hold on, grid on;
+hold on;
+grid on;
+
+set(0, 'defaultFigureUnits', 'inches', 'defaultFigurePosition', [1 1 8 5]);
+% figures are 8" wide and 5" tall, with the bottom left corner of the figure beginning 1" up, and 1" to the right from the bottom left corner
+%of your screen -- adjust the size of the figure to your liking
+set(0,'defaultLineLineWidth',2.5) % sets all line widths of plotted lines
+set(0,'DefaultaxesLineWidth', 1.5) % sets line widths of axes
+set(0,'DefaultaxesFontSize', 14)
+set(0,'DefaultTextFontSize', 14)
+set(0,'DefaultaxesFontName', 'Times new Roman')
+set(0,'DefaultlegendFontName', 'Times new Roman')
+set(0,'defaultAxesXGrid', 'on')
+set(0,'defaultAxesYGrid','on')
 
 x = linspace(0, 11);
 T_analyitical = P(2) + P(1)*x;
@@ -71,9 +83,8 @@ ylabel('Temperature (°C)');
 title('Steady-State Temperature — ' + case_x.name);
 legend('Location','best');
 
-
-
-
+filename = ( case_x.name + '_comparison'); 
+print(filename,'-r300','-dpng') % saves a png with a resolution of 300 dots/inch
 
 end
 
