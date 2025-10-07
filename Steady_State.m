@@ -73,7 +73,7 @@ set(0,'defaultAxesXGrid', 'on')
 set(0,'defaultAxesYGrid','on')
 
 x = linspace(0, 11);
-T_analyitical = P(2) + P(1)*x;
+T_analyitical = case_x.T_0 + case_x.H * x * 0.0254;
 plot(x, T_analyitical,'-', 'LineWidth', 1.5, 'DisplayName','Linear fit: T_0 + Hx');
 T_sense_position;
 T_actual = case_x.T_steady;
@@ -83,11 +83,20 @@ ylabel('Temperature (°C)');
 title('Steady-State Temperature — ' + case_x.name);
 legend('Location','best');
 
-filename = ( case_x.name + '_comparison'); 
+filename = ( case_x.name + '_comparison_actual'); 
 print(filename,'-r300','-dpng') % saves a png with a resolution of 300 dots/inch
 
 end
 
+
+
+function [T_0, H] = fit_line(case_x);
+D  = 0.0254;
+Area = (D/2)^2 * pi;
+Q_dot = case_x.V * case_x.Amp;
+H = Q_dot/(case_x.material.k * Area);
+T_0 = mean(case_x.T_sense(1,:));
+end
 
 
 function [T_0, H] = analyitical_line(case_x);
