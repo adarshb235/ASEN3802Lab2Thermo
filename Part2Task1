@@ -1,0 +1,52 @@
+clear; clc; close all
+
+% material & constants
+k = 130; 
+rho = 2810; 
+cp = 960;
+alpha = k/(rho*cp);
+L = 0.254;           % m
+H = 91.086;          % deg C/m
+T0 = 17;             % deg C
+x = L;               % evaluate at hot end (thermocouple 8)
+
+% time values
+t1 = 1;          % s
+t2 = 1000;       % s
+Nmax = 10;       % number of terms
+
+% bn and partial sums
+n = (1:Nmax)';   % column vector of term indices
+lambda = (2*n - 1)*pi/(2*L);
+bn = ((-1).^(n+1)) .* (-8*L*H) ./ ((2*n - 1).^2 * pi^2);
+
+% partial sums
+Nterms = 1:Nmax;
+T_t1 = zeros(size(Nterms));
+T_t2 = zeros(size(Nterms));
+
+for i = 1:Nmax
+    n_i = 1:i;
+    lam = lambda(n_i);
+    b = bn(n_i);
+
+    %summation
+
+    T_t1(i) = T0 + H*x + sum(b .* sin(lam*x) .* exp(-lam.^2 * alpha * t1));
+    T_t2(i) = T0 + H*x + sum(b .* sin(lam*x) .* exp(-lam.^2 * alpha * t2));
+
+end
+
+Tsteady = T0 + H*x;
+
+
+% plot
+figure;
+plot(Nterms, T_t1, 'o-', 'LineWidth', 1.5, 'DisplayName', 't = 1 s'); 
+hold on;
+plot(Nterms, T_t2, 's-', 'LineWidth', 1.5, 'DisplayName', 't = 1000 s');
+xlabel('Number of terms (n)');
+ylabel('Temperature at x = L (°C)');
+title('Convergence of Transient Series Solution (Aluminum)');
+legend('Location','best');
+grid on;
