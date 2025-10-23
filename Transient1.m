@@ -35,10 +35,10 @@ case4.m = 4.874;
 case5_data = readmatrix("Steel_22V_203mA");
 case5 = struct("name", "Steel 22V 203mA","material", steel, "V", 22, "Amp", 0.203, "t", case5_data(:,1), "T_sense", case5_data(:, 2:9));
 [case5.T_0, case5.H] = analyitical_line(case5);
-case5.T_steady = mean([case5.T_sense(322:342, :)] , 1);
+case5.T_steady = mean([case5.T_sense(900:1000, :)] , 1);
 case5.m = 18.466;
 
-
+M = [case1.m case2.m case3.m case4.m case5.m];
 
 
 T_sense_position = linspace(1.375, 1.375 + 0.5 * 7, 8);
@@ -76,6 +76,7 @@ for j = 1:length(cases)
     timespan = 0:10:max(case_x.t);
     T_model = Transient_Solution(T_sense_position, timespan, case_x, 2); % value at the end determines case 0 is task 2 model 1 is task 3 model 2 is task 4 model
     T_exp   = case_x.T_sense;
+    
 
     nexttile;
     hold on; grid on; box on;
@@ -105,17 +106,17 @@ print('ModelIA_5Subplots_Rainbow','-dpng','-r300');
 
 
 
-function [T] = Transient_Solution(x,t,case_x, hexp)
+function [T] = Transient_Solution(x,t,case_x, cases)
 
     n_end = 10;
     L = (max(x) + 1) * 0.0254;
     x = x * 0.0254;
     P = polyfit(x, case_x.T_steady,1);
     H = case_x.H;
-    if hexp ~= 0
+    if cases ~= 0
         H = P(1);
     end
-    if hexp == 2
+    if cases == 2
         M = case_x.m;
     else
         M = 0;
