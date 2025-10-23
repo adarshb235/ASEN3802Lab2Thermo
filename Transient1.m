@@ -12,26 +12,31 @@ case1_data = readmatrix("Aluminum_25V_240mA");
 case1 = struct("name", "Aluminum 25V 240mA","material", aluminium, "V", 25, "Amp", 0.240, "t", case1_data(:,1), "T_sense", case1_data(:, 2:9));
 [case1.T_0, case1.H] = analyitical_line(case1);
 case1.T_steady = mean([case1.T_sense(322:342, :)] , 1);
+case1.m = 0.469;
 
 case2_data = readmatrix("Aluminum_30V_290mA");
 case2 = struct("name", "Aluminum 30V 290mA","material", aluminium, "V", 30, "Amp", 0.290, "t", case2_data(:,1), "T_sense", case2_data(:, 2:9));
 [case2.T_0, case2.H] = analyitical_line(case2);
 case2.T_steady = mean([case2.T_sense(322:342, :)] , 1);
+case2.m = 0.094;
 
 case3_data = readmatrix("Brass_25V_237mA");
 case3 = struct("name", "Brass 25V 237mA","material", brass, "V", 25, "Amp", 0.237, "t", case3_data(:,1), "T_sense", case3_data(:, 2:9));
 [case3.T_0, case3.H] = analyitical_line(case3);
 case3.T_steady = mean([case3.T_sense(322:342, :)] , 1);
+case3.m = 4.312;
 
 case4_data = readmatrix("Brass_30V_285mA");
 case4 = struct("name", "Brass 30V 285mA","material", brass, "V", 30, "Amp", 0.285, "t", case4_data(:,1), "T_sense", case4_data(:, 2:9));
 [case4.T_0, case4.H] = analyitical_line(case4);
 case4.T_steady = mean([case4.T_sense(322:342, :)] , 1);
+case4.m = 4.874;
 
 case5_data = readmatrix("Steel_22V_203mA");
 case5 = struct("name", "Steel 22V 203mA","material", steel, "V", 22, "Amp", 0.203, "t", case5_data(:,1), "T_sense", case5_data(:, 2:9));
 [case5.T_0, case5.H] = analyitical_line(case5);
 case5.T_steady = mean([case5.T_sense(322:342, :)] , 1);
+case5.m = 18.466;
 
 
 
@@ -69,7 +74,7 @@ cmap = jet(8);    % or use hsv(8) or parula(8) depending on preference
 for j = 1:length(cases)
     case_x = cases{j};
     timespan = 0:10:max(case_x.t);
-    T_model = Transient_Solution(T_sense_position, timespan, case_x, 1);
+    T_model = Transient_Solution(T_sense_position, timespan, case_x, 2); % value at the end determines case 0 is task 2 model 1 is task 3 model 2 is task 4 model
     T_exp   = case_x.T_sense;
 
     nexttile;
@@ -107,9 +112,15 @@ function [T] = Transient_Solution(x,t,case_x, hexp)
     x = x * 0.0254;
     P = polyfit(x, case_x.T_steady,1);
     H = case_x.H;
-    if hexp == 1
+    if hexp ~= 0
         H = P(1);
     end
+    if hexp == 2
+        M = case_x.m;
+    else
+        M = 0;
+    end
+
     T_0 = case_x.T_0;
     alpha = case_x.material.k / (case_x.material.cp * case_x.material.row);
     
@@ -122,7 +133,7 @@ function [T] = Transient_Solution(x,t,case_x, hexp)
 
         lam_n = ((2*n - 1)* pi) / (2 * L);
         
-        b_n = ((-2 * H / L) * (4*L^2) / (pi^2 * (2*n-1)^2)) * (-1)^(n+1);
+        b_n = -(8*(M - H)*L*(-1)^n) / ((2*n-1)^2*pi^2);
         
         sum = sum + exp(-(lam_n^2) * alpha * timemat) .* (b_n * sin(lam_n * x_mat));
         
