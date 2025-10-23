@@ -50,3 +50,11 @@ ylabel('Temperature at x = L (°C)');
 title('Convergence of Transient Series Solution (Aluminum)');
 legend('Location','best');
 grid on;
+
+t = [t1, t2];
+
+k = 130;
+rho = 2810;
+Cp = 960;
+alpha =  k/(rho * Cp);
+Fo = alpha * t / L^2;
