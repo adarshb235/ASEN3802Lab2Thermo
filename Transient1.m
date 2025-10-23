@@ -69,7 +69,7 @@ cmap = jet(8);    % or use hsv(8) or parula(8) depending on preference
 for j = 1:length(cases)
     case_x = cases{j};
     timespan = 0:10:max(case_x.t);
-    T_model = Transient_Solution(T_sense_position, timespan, case_x);
+    T_model = Transient_Solution(T_sense_position, timespan, case_x, 1);
     T_exp   = case_x.T_sense;
 
     nexttile;
@@ -100,15 +100,17 @@ print('ModelIA_5Subplots_Rainbow','-dpng','-r300');
 
 
 
-function [T] = Transient_Solution(x,t,case_x)
+function [T] = Transient_Solution(x,t,case_x, hexp)
 
     n_end = 10;
     L = (max(x) + 1) * 0.0254;
-    x = x * 0.0254
+    x = x * 0.0254;
     P = polyfit(x, case_x.T_steady,1);
-    %H = case_x.H
-    H = P(1)
-    T_0 = case_x.T_0
+    H = case_x.H;
+    if hexp == 1
+        H = P(1);
+    end
+    T_0 = case_x.T_0;
     alpha = case_x.material.k / (case_x.material.cp * case_x.material.row);
     
 
