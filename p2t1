@@ -1,0 +1,62 @@
+clear; clc; close all
+
+% material & constants
+k = 130; 
+rho = 2810; 
+cp = 960;
+alpha = k / (rho * cp);
+
+L = 0.254;                    % total rod length (m)
+H = 91.086;                   % deg C/m 
+T0 = 17;                      % deg C
+
+% position of TH8 
+in2m = 0.0254;
+x8 = (1.375 + 0.5*7) * in2m;  % inches to m
+x = x8;                       % evaluate at TH8 location
+
+% time values
+t1 = 1;                       
+t2 = 1000;                    
+Nmax = 10;                    
+
+Nterms = 0:Nmax;
+T_t1 = zeros(size(Nterms));
+T_t2 = zeros(size(Nterms));
+
+% n = 0 baseline
+T_t1(1) = T0 + H*x;
+T_t2(1) = T0 + H*x;
+
+% fourier coefficients
+n = (1:Nmax)';
+lambda = (2*n - 1)*pi/(2*L);
+bn = (8*H*L) .* ((-1).^n) ./ ((2*n - 1).^2 * pi^2);
+
+% sums for t = 1 and 1000
+for i = 1:Nmax
+    idx = 1:i;
+    lam = lambda(idx);
+    b = bn(idx);
+
+    T_t1(i+1) = T0 + H*x + sum(b .* sin(lam*x) .* exp(-lam.^2 * alpha * t1));
+    T_t2(i+1) = T0 + H*x + sum(b .* sin(lam*x) .* exp(-lam.^2 * alpha * t2));
+end
+
+Tsteady = T0 + H*x;       % steady state line 
+
+% plot
+figure; 
+hold on; 
+grid on; 
+box on;
+plot(Nterms, T_t1, 'o-', 'LineWidth', 1.5, 'DisplayName','t = 1 s');
+plot(Nterms, T_t2, 's-', 'LineWidth', 1.5, 'DisplayName','t = 1000 s');
+yline(Tsteady,'--k','T_{steady}','LabelHorizontalAlignment','left', 'DisplayName', 'T_{steady}');
+
+xlabel('Number of terms n');
+ylabel('Temperature at x = Th8 (°C)');
+title('Convergence of Transient Series Solution for Aluminum 25 V');
+legend('Location','best');
+
+
