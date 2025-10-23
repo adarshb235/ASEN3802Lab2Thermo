@@ -39,7 +39,7 @@ case5.T_steady = mean([case1.T_sense(322:342, :)] , 1);
 T_sense_position = linspace(1.375, 1.375 + 0.5 * 7, 8);
 P = polyfit(T_sense_position, case1.T_steady,1);
 
-T = Transient_Solution(linspace(1.375, 1.375 + 0.5 * 7, 8), 0:100, case1)
+T = Transient_Solution(linspace(1.375, 1.375 + 0.5 * 7, 8), 0:3490, case1)
 
 %compare(case1)
 %compare(case2)
@@ -52,7 +52,7 @@ T = Transient_Solution(linspace(1.375, 1.375 + 0.5 * 7, 8), 0:100, case1)
 
 function [T] = Transient_Solution(x,t,case_x)
 
-    n_end = 1;
+    n_end = 10;
     L = (max(x) + 1) * 0.0254;
     x = x * 0.0254
     H = case_x.H
@@ -63,19 +63,17 @@ function [T] = Transient_Solution(x,t,case_x)
     sum = zeros([length(t),length(x)]);
      x_mat = repmat(x,length(t),1);
      mat = ones([length(t),length(x)]);
-     timemat = repmat(length(x),t,1);
+     timemat = transpose(repmat(t, length(x), 1));
     for n = 1:n_end
 
         lam_n = (2*n - 1)* pi / (2 * L);
         b_n = (-2 * H / L) * (4*L^2) / (pi^2 * (2*n-1)^2) * (-1)^(n+1);
-
-        test = exp(-(lam_n^2) .* alpha .* timemat)
-
-        sum = sum + exp(-(lam_n^2) .* alpha .* timemat) .* b_n .* sin(lam_n * help);
+        
+        sum = sum + exp(-(lam_n^2) .* alpha .* timemat) .* b_n .* sin(lam_n * x_mat);
         
     end
 
-   T = T_0 * mat + H * x_mat;
+   T = T_0 * mat + H * x_mat + sum;
 end
 
 
