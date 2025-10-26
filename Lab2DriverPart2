@@ -1,0 +1,136 @@
+clc;
+clear;
+close all;
+
+
+[data, filenames, volts, amps] = filereadin();
+
+for i = 1:length(data)
+    time(:, i) = {data(i).time};
+    CH1(:, i) = {data(i).CH1};
+    CH2(:, i) = {data(i).CH2};
+    CH3(:, i) = {data(i).CH3};
+    CH4(:, i) = {data(i).CH4};
+    CH5(:, i) = {data(i).CH5};
+    CH6(:, i) = {data(i).CH6};
+    CH7(:, i) = {data(i).CH7};
+    CH8(:, i) = {data(i).CH8};
+
+    initialTempDist(i, :) = [CH1{1, i}(1) CH2{1, i}(1) CH3{1, i}(1) CH4{1, i}(1) CH5{1, i}(1) CH6{1, i}(1) CH7{1, i}(1) CH8{1, i}(1)];
+end
+
+labels = ["CH1", "CH2", "CH3", "CH4", "CH5", "CH6", "CH7", "CH8"];
+
+% Part 1 Task 2
+
+figure(100);
+hold on;
+plot(initialTempDist', 'o');
+xscale = 1:8;
+xticks(xscale);
+xticklabels(labels);
+title('Initial Temperature Distribution vs Channel Position');
+xlabel('Channel Label');
+ylabel('Temperature ')
+
+num_files = size(initialTempDist, 1);
+num_cols = ceil(sqrt(num_files));
+num_rows = ceil(num_files / num_cols);
+
+figure(200);
+inChannelsDistScale = [1.375:0.5:4.875];
+channelsDistScale = 0.0254 * inChannelsDistScale;
+distScale = 0.0254 * [0 channelsDistScale 5.875];
+sgtitle('Initial Temperature Distribution vs X Location Along L')
+for i = 1:num_files
+    fitCoeff(i, :) = polyfit(channelsDistScale, initialTempDist(i, :), 1);
+    fitDist(i, :) = polyval(fitCoeff(i, :), distScale);
+    subplot(num_rows, num_cols, i);
+    hold on;
+    plot(channelsDistScale, initialTempDist(i, :)', 'or');
+    plot(distScale, fitDist(i, :), 'b-');
+    plot(distScale, fitDist(i, :) - 2, 'k--');
+    plot(distScale, fitDist(i, :) + 2, 'k--');
+    givenTitle = append("Material: ", filenames(1, i), ' ', "Voltage: ", filenames(2, i), ' ', "Current: ", filenames(3, i));
+    title(givenTitle);
+    legend('Experimental', 'Best Fit', 'Error Bars +/- 2 deg C', 'Location', 'best')
+    xlabel('Position (m)');
+    ylabel('Temperature (degrees C)');
+    hold off;
+end
+M_ext = fitCoeff(:,1);
+hold off;
+
+filename = 'part1task2_initialtempdistfig';
+ax = gca; 
+set(ax, 'LooseInset', get(ax, 'TightInset'));
+print(filename,'-r500','-dpng')
+
+% Part 2 Task 2-4
+
+n_end = 10;
+matVec = zeros(num_files, 1);
+addMat = zeros(num_files, 3);
+for i = 1:length(filenames)
+    if(filenames(1, i) == "Aluminum")
+        addMat(i, :) = [2810, 960, 130];
+        matVec(i) = 1;
+    elseif(filenames(1, i) == "Brass")
+        addMat(i, :) = [8500 380 115];
+        matVec(i) = 2;
+    elseif(filenames(1, i) == "Steel")
+        addMat(i, :) = [8000, 500, 16.2];
+        matVec(i) = 3;
+    end
+end
+
+rho = addMat(:, 1);
+cp = addMat(:, 2);
+k = addMat(:, 3);
+
+Q_dot = zeros(num_files, 1);
+H_an = zeros(num_files, 1);
+T_0 = zeros(num_files, 1);
+T_steady = zeros(num_files, 8);
+H_exp = zeros(num_files, 1);
+
+
+
+for i = 1:num_files
+    L = max(distScale);
+    T_dist = [CH1{1, i}(:) CH2{1, i}(:) CH3{1, i}(:) CH4{1, i}(:) CH5{1, i}(:) CH6{1, i}(:) CH7{1, i}(:) CH8{1, i}(:)];
+    D  = 0.0254;
+    Area = (D/2)^2 * pi;
+    Q_dot(i) = volts(i) .* amps(i) .* 10^-3;
+    H_an(i) = Q_dot(i)./(k(i) .* Area);
+    T_0(i) = mean(initialTempDist(i, :));
+    if(matVec(i) == 3)
+        mean_range = 900:1000;
+    else
+        mean_range = 322:342;
+    end
+    T_steady(i, :) = mean([T_dist(mean_range, :)], 1);
+    P = polyfit(channelsDistScale, T_steady(i, :), 1);
+    
+    alpha = k ./ (cp .* rho);
+    H_exp(i) = P(1);
+    
+    time_vec = time{i};
+    sum = zeros([length(time_vec), length(channelsDistScale)]);
+    x_mat = repmat(channelsDistScale,length(time_vec),1);
+    mat = ones([length(time_vec), length(channelsDistScale)]);
+    timemat = transpose(repmat(time_vec, length(channelsDistScale), 1));
+   
+    %ERROR EXISTS HERE WILL FIX ASAP
+    for n = 1:n_end
+        lam_n = ((2*n - 1)* pi) / (2 * L);
+        b_n = -(8*(- H_an(i))*L*(-1)^n) / ((2*n-1)^2*pi^2);
+        sum = sum + exp(-(lam_n^2) .* alpha(i) .* timemat) .* (b_n .* sin(lam_n .* x_mat)); 
+     
+    end
+    
+    T(i, :) = T_0(i) * mat + H_exp(i) * x_mat + sum;
+    
+end
+
+
