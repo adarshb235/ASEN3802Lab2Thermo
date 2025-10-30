@@ -11,13 +11,13 @@ steel = struct("row", 8000, "cp", 500, "k", 16.2);
 case1_data = readmatrix("Aluminum_25V_240mA");
 case1 = struct("name", "Aluminum 25V 240mA","material", aluminium, "V", 25, "Amp", 0.240, "t", case1_data(:,1), "T_sense", case1_data(:, 2:9));
 [case1.T_0, case1.H] = analyitical_line(case1);
-case1.T_steady = mean([case1.T_sense(322:342, :)] , 1);
+case1.T_steady = mean([case1.T_sense(300:340, :)] , 1);
 case1.m = 0.469;
 
 case2_data = readmatrix("Aluminum_30V_290mA");
 case2 = struct("name", "Aluminum 30V 290mA","material", aluminium, "V", 30, "Amp", 0.290, "t", case2_data(:,1), "T_sense", case2_data(:, 2:9));
 [case2.T_0, case2.H] = analyitical_line(case2);
-case2.T_steady = mean([case2.T_sense(322:342, :)] , 1);
+case2.T_steady = mean([case2.T_sense(300:340, :)] , 1);
 case2.m = 0.094;
 
 case3_data = readmatrix("Brass_25V_237mA");
@@ -38,7 +38,7 @@ case5 = struct("name", "Steel 22V 203mA","material", steel, "V", 22, "Amp", 0.20
 case5.T_steady = mean([case5.T_sense(900:1000, :)] , 1);
 case5.m = 18.466;
 
-M = [case1.m case2.m case3.m case4.m case5.m];
+
 
 
 T_sense_position = linspace(1.375, 1.375 + 0.5 * 7, 8);
@@ -74,9 +74,8 @@ cmap = jet(8);    % or use hsv(8) or parula(8) depending on preference
 for j = 1:length(cases)
     case_x = cases{j};
     timespan = 0:10:max(case_x.t);
-    T_model = Transient_Solution(T_sense_position, timespan, case_x, 2); % value at the end determines case 0 is task 2 model 1 is task 3 model 2 is task 4 model
+    T_model = Transient_Solution(T_sense_position, timespan, case_x, 1); % value at the end determines case 0 is task 2 model 1 is task 3 model 2 is task 4 model
     T_exp   = case_x.T_sense;
-    
 
     nexttile;
     hold on; grid on; box on;
@@ -106,17 +105,17 @@ print('ModelIA_5Subplots_Rainbow','-dpng','-r300');
 
 
 
-function [T] = Transient_Solution(x,t,case_x, cases)
+function [T] = Transient_Solution(x,t,case_x, hexp)
 
     n_end = 10;
     L = (max(x) + 1) * 0.0254;
     x = x * 0.0254;
     P = polyfit(x, case_x.T_steady,1);
     H = case_x.H;
-    if cases ~= 0
-        H = P(1);
+    if hexp ~= 0
+        H = (case_x.T_steady(5) - case_x.T_0)/x(5) ;
     end
-    if cases == 2
+    if hexp == 2
         M = case_x.m;
     else
         M = 0;
