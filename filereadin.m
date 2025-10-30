@@ -1,4 +1,4 @@
-function [FinalData, namingVec] = filereadin() 
+function [FinalData, namingVec, volts, amps] = filereadin() 
 
     a=dir('*mA');
 
