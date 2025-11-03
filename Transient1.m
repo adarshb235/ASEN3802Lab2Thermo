@@ -13,30 +13,35 @@ case1 = struct("name", "Aluminum 25V 240mA","material", aluminium, "V", 25, "Amp
 [case1.T_0, case1.H] = analyitical_line(case1);
 case1.T_steady = mean([case1.T_sense(300:340, :)] , 1);
 case1.m = 0.469;
+case1.alphaFactor = 0.55;
 
 case2_data = readmatrix("Aluminum_30V_290mA");
 case2 = struct("name", "Aluminum 30V 290mA","material", aluminium, "V", 30, "Amp", 0.290, "t", case2_data(:,1), "T_sense", case2_data(:, 2:9));
 [case2.T_0, case2.H] = analyitical_line(case2);
 case2.T_steady = mean([case2.T_sense(300:340, :)] , 1);
 case2.m = 0.094;
+case2.alphaFactor = 0.5;
 
 case3_data = readmatrix("Brass_25V_237mA");
 case3 = struct("name", "Brass 25V 237mA","material", brass, "V", 25, "Amp", 0.237, "t", case3_data(:,1), "T_sense", case3_data(:, 2:9));
 [case3.T_0, case3.H] = analyitical_line(case3);
 case3.T_steady = mean([case3.T_sense(322:342, :)] , 1);
 case3.m = 4.312;
+case3.alphaFactor = 0.5;
 
 case4_data = readmatrix("Brass_30V_285mA");
 case4 = struct("name", "Brass 30V 285mA","material", brass, "V", 30, "Amp", 0.285, "t", case4_data(:,1), "T_sense", case4_data(:, 2:9));
 [case4.T_0, case4.H] = analyitical_line(case4);
 case4.T_steady = mean([case4.T_sense(322:342, :)] , 1);
 case4.m = 4.874;
+case4.alphaFactor = 0.5;
 
 case5_data = readmatrix("Steel_22V_203mA");
 case5 = struct("name", "Steel 22V 203mA","material", steel, "V", 22, "Amp", 0.203, "t", case5_data(:,1), "T_sense", case5_data(:, 2:9));
 [case5.T_0, case5.H] = analyitical_line(case5);
 case5.T_steady = mean([case5.T_sense(900:1000, :)] , 1);
 case5.m = 18.466;
+case5.alphaFactor = 0.5;
 
 
 
@@ -74,17 +79,25 @@ cmap = jet(8);    % or use hsv(8) or parula(8) depending on preference
 for j = 1:length(cases)
     case_x = cases{j};
     timespan = 0:10:max(case_x.t);
-    T_model = Transient_Solution(T_sense_position, timespan, case_x, 1); % value at the end determines case 0 is task 2 model 1 is task 3 model 2 is task 4 model
+    alpha = linspace(0,1.5,101);
+    for i = 1:length(alpha)
+    [T_model, rsme(i)] = Transient_Solution(T_sense_position, timespan, case_x, 1,alpha(i));
+    end
+    [M, I] = min(rsme);
+    alpha(I)
+    % value at the end determines case 0 is task 2 model 1 is task 3 model 2 is task 4 model
     T_exp   = case_x.T_sense;
 
     nexttile;
     hold on; grid on; box on;
 
     % plot experimental + analytical for all 8 thermocouples
+    [T_model, rsme(i)] = Transient_Solution(T_sense_position, timespan, case_x, 2,alpha(I));
     for i = 1:8
         % Experimental in dark gray for clarity
         plot(case_x.t, T_exp(:,i), 'Color', [0.2 0.2 0.2], 'LineWidth', 1.0);
         % Analytical with rainbow color
+       
         plot(timespan, T_model(:,i), '-', 'Color', cmap(i,:), 'LineWidth', 1.8);
     end
 
@@ -105,7 +118,7 @@ print('ModelIA_5Subplots_Rainbow','-dpng','-r300');
 
 
 
-function [T] = Transient_Solution(x,t,case_x, hexp)
+function [T,rsme] = Transient_Solution(x,t,case_x, hexp,alpha)
 
     n_end = 10;
     L = (max(x) + 1) * 0.0254;
@@ -113,7 +126,7 @@ function [T] = Transient_Solution(x,t,case_x, hexp)
     P = polyfit(x, case_x.T_steady,1);
     H = case_x.H;
     if hexp ~= 0
-        H = (case_x.T_steady(5) - case_x.T_0)/x(5) ;
+        H = (case_x.T_steady(8) - case_x.T_0)/x(8) ;
     end
     if hexp == 2
         M = case_x.m;
@@ -122,7 +135,7 @@ function [T] = Transient_Solution(x,t,case_x, hexp)
     end
 
     T_0 = case_x.T_0;
-    alpha = case_x.material.k / (case_x.material.cp * case_x.material.row);
+    alpha = alpha * case_x.material.k / (case_x.material.cp * case_x.material.row);
     
 
     sum = zeros([length(t),length(x)]);
@@ -140,6 +153,8 @@ function [T] = Transient_Solution(x,t,case_x, hexp)
     end
 
    T = T_0 * mat + H * x_mat + sum;
+
+   rsme = sqrt(mean((case_x.T_sense(1:200,8) - T(1:200,8)).^2));
 end
 
 
