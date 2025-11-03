@@ -1,0 +1,354 @@
+clc;
+clear;
+close all;
+
+
+[data, filenames, volts, amps] = filereadin();
+
+plot1 = 0;
+plot2 = 0;
+part2 = 0;
+plot3 = 1;
+
+for i = 1:length(data)
+    time(:, i) = {data(i).time};
+    CH1(:, i) = {data(i).CH1};
+    CH2(:, i) = {data(i).CH2};
+    CH3(:, i) = {data(i).CH3};
+    CH4(:, i) = {data(i).CH4};
+    CH5(:, i) = {data(i).CH5};
+    CH6(:, i) = {data(i).CH6};
+    CH7(:, i) = {data(i).CH7};
+    CH8(:, i) = {data(i).CH8};
+    
+    initialTempDist(i, :) = [CH1{1, i}(1) CH2{1, i}(1) CH3{1, i}(1) CH4{1, i}(1) CH5{1, i}(1) CH6{1, i}(1) CH7{1, i}(1) CH8{1, i}(1)];
+end
+
+labels = ["CH1", "CH2", "CH3", "CH4", "CH5", "CH6", "CH7", "CH8"];
+
+% Part 1 Task 2
+
+if (plot1 == 1)
+figure(100);
+hold on;
+plot(initialTempDist', 'o');
+xscale = 1:8;
+xticks(xscale);
+xticklabels(labels);
+title('Initial Temperature Distribution vs Channel Position');
+xlabel('Channel Label');
+ylabel('Temperature ')
+end
+
+num_files = size(initialTempDist, 1);
+num_cols = ceil(sqrt(num_files));
+num_rows = ceil(num_files / num_cols);
+
+if (plot1 == 1)
+figure(200);
+end
+inChannelsDistScale = [1.375:0.5:4.875];
+channelsDistScale = 0.0254 * inChannelsDistScale;
+distScale = 0.0254 * [0 channelsDistScale 5.875];
+if (plot1 == 1)
+sgtitle('Initial Temperature Distribution vs X Location Along L')
+end
+for i = 1:num_files
+    fitCoeff(i, :) = polyfit(channelsDistScale, initialTempDist(i, :), 1);
+    fitDist(i, :) = polyval(fitCoeff(i, :), distScale);
+    if (plot1 == 1)
+    subplot(num_rows, num_cols, i);
+    hold on;
+    plot(channelsDistScale, initialTempDist(i, :)', 'or');
+    plot(distScale, fitDist(i, :), 'b-');
+    plot(distScale, fitDist(i, :) - 2, 'k--');
+    plot(distScale, fitDist(i, :) + 2, 'k--');
+    givenTitle = append("Material: ", filenames(1, i), ' ', "Voltage: ", filenames(2, i), ' ', "Current: ", filenames(3, i));
+    title(givenTitle);
+    legend('Experimental', 'Best Fit', 'Error Bars +/- 2 deg C', 'Location', 'best')
+    xlabel('Position (m)');
+    ylabel('Temperature (degrees C)');
+    hold off;
+    end
+end
+M_ext = fitCoeff(:,1);
+
+if (plot1 == 1)
+hold off;
+filename = 'part1task2_initialtempdistfig';
+ax = gca; 
+set(ax, 'LooseInset', get(ax, 'TightInset'));
+print(filename,'-r500','-dpng')
+end
+
+% Part 3 Task 2
+
+
+n_end = 10;
+matVec = zeros(num_files, 1);
+addMat = zeros(num_files, 3);
+for i = 1:length(filenames)
+    if(filenames(1, i) == "Aluminum")
+        addMat(i, :) = [2810, 960, 130];
+        matVec(i) = 1;
+    elseif(filenames(1, i) == "Brass")
+        addMat(i, :) = [8500 380 115];
+        matVec(i) = 2;
+    elseif(filenames(1, i) == "Steel")
+        addMat(i, :) = [8000, 500, 16.2];
+        matVec(i) = 3;
+    end
+end
+
+rho = addMat(:, 1);
+cp = addMat(:, 2);
+k = addMat(:, 3);
+
+Q_dot = zeros(num_files, 1);
+H_an = zeros(num_files, 1);
+T_0 = zeros(num_files, 1);
+T_steady = zeros(num_files, 8);
+H_exp = zeros(num_files, 8);
+T = cell(num_files, 3);
+
+
+for i = 1:num_files
+    %alpha_val = (k ./ rho ./ cp);
+    alpha_val = (k ./ rho ./ cp) .* [0.54; 0.54; 0.405; 0.405; 1.0275];
+    L = max(distScale);
+    T_dist = [CH1{1, i}(:) CH2{1, i}(:) CH3{1, i}(:) CH4{1, i}(:) CH5{1, i}(:) CH6{1, i}(:) CH7{1, i}(:) CH8{1, i}(:)];
+    D  = 0.0254;
+    Area = (D/2)^2 * pi;
+    Q_dot(i) = volts(i) .* amps(i) .* 10^-3;
+    H_an(i) = Q_dot(i)./(k(i) .* Area);
+    T_0(i) = mean(initialTempDist(i, :));
+    if(matVec(i) == 3)
+        mean_range = 900:1000;
+    else
+        mean_range = 322:342;
+    end
+    T_steady(i, :) = mean([T_dist(mean_range, :)], 1);
+    H_exp(i) = (T_steady(i, 8) - T_0(i)) / channelsDistScale(8);
+    
+        
+    time_vec = time{i};
+
+
+    for j = 1:3
+         expMat = [data(i).CH1 data(i).CH2 data(i).CH3 data(i).CH4 data(i).CH5 data(i).CH6 data(i).CH7 data(i).CH8];
+         if (plot2 == 1)
+         figure()
+         hold on;
+         grid on;
+         box on;
+         end
+         for p = 1:8
+            if (plot2 == 1)
+            plot(time_vec, expMat(:, p), 'LineWidth', 1.3, 'Color', 'blue')
+            plot([0 0.0000001], [0 0.00000001], 'red')
+            end
+         end
+         T{i, j} = zeros(length(time_vec), length(channelsDistScale)); 
+
+         for l = 1:length(time_vec)
+            sum = zeros([1, length(channelsDistScale)]);
+            
+            for n = 1:n_end
+                lam_n = ((2*n - 1) * pi) / (2 * L);
+                
+                if (j == 1) % Model IA
+                    b_n = (8*H_an(i)*L*(-1)^n) / ((2*n-1)^2*pi^2);
+                    givenTitle2 = append("Transient Solution Temperature vs Time ", " Mat: ", filenames(1, i), ' ', "Volt: ", filenames(2, i), ' ', "Current: ", filenames(3, i), " Model 1A");
+                elseif (j == 2) % Model IB
+                    b_n = (8*H_exp(i)*L*(-1)^n) / ((2*n-1)^2*pi^2);
+                    givenTitle2 = append("Transient Solution Temperature vs Time ", " Mat: ", filenames(1, i), ' ', "Volt: ", filenames(2, i), ' ', "Current: ", filenames(3, i), " Model 1B");
+                elseif (j == 3) % Model II
+                    b_n = (8*(-M_ext(i) + H_exp(i))*L*(-1)^n) / ((2*n-1)^2*pi^2);
+                    givenTitle2 = append("Transient Solution Temperature vs Time ", " Mat: ", filenames(1, i), ' ', "Volt: ", filenames(2, i), ' ', "Current: ", filenames(3, i), " Model 2");
+                end
+                
+                sum = sum + exp(-(lam_n.^2) .* alpha_val(i) .* time_vec(l)) .* (b_n .* sin(lam_n .* channelsDistScale)); 
+            end
+
+            if (j == 1)
+                % Model IA uses H_an for the linear term
+                T{i, j}(l, :) = T_0(i) * ones(1, length(channelsDistScale))  + (H_an(i) * channelsDistScale) + sum;
+            elseif (j == 2)
+                % Model IB and II use H_exp for the linear term
+                for p = 1:8
+                    H_exp2 = (T_steady(i, p) - T_0(i)) / channelsDistScale(p);
+                    T{i, j}(l, p) = T_0(i)  + (H_exp2 * channelsDistScale(p)) + sum(p);
+                end
+            elseif (j == 3)
+                T{i, j}(l, :) = T_0(i) * ones(1, length(channelsDistScale))  + ((-M_ext(i) + H_exp(i)) * channelsDistScale) + sum;    
+            end
+         end
+    if (plot2 == 1)
+    plot(time_vec, T{i, j}, '-', 'LineWidth', 1.8, 'Color', 'red');
+    title(givenTitle2)
+    legend('Experimental Data', 'Analytical Data', 'Location', 'best')
+    xlabel('Time (s)');
+    ylabel('Temperature (deg C)')
+    hold off;
+    end
+    code = append(filenames(1, i), filenames(2, i), filenames(3, i));
+    filename = 'part3transientplot';
+    if (j == 1)
+        filename = append(filename, code, "Model1A");
+    elseif (j == 2)
+        filename = append(filename, code, "Model1B");
+    elseif (j == 3)
+        filename = append(filename, code, "Model2");
+    end
+
+    if (plot2 == 1)
+    ax = gca; 
+    set(ax, 'LooseInset', get(ax, 'TightInset'));
+    print(filename,'-r500','-dpng')
+    end
+    end   
+end
+
+if (plot2 == 1)
+for j=1:3
+    figure()
+    hold on;
+    if (j == 1)
+        sgtitle("Part 3 Analysis: Model 1A")
+    elseif (j == 2)
+        sgtitle("Part 3 Analysis: Model 3")
+    elseif(j == 3)
+        sgtitle("Part 3 Analysis: Model 2")
+    end
+    for i=1:num_files
+        givenTitle3 = append(" Mat: ", filenames(1, i), ' ', "Volt: ", filenames(2, i), ' ', "Current: ", filenames(3, i));
+        expMat = [data(i).CH1 data(i).CH2 data(i).CH3 data(i).CH4 data(i).CH5 data(i).CH6 data(i).CH7 data(i).CH8];
+        subplot(num_rows, num_cols, i)
+        hold on;
+        grid on;
+        box on;
+        title(givenTitle3);
+        for k = 1:8
+            plot(time{i}, expMat(:, k), 'LineWidth', 1.0, 'Color', 'blue')
+            plot(time{i}, T{i, j}(:, k), 'LineWidth', 1.2, 'Color', 'red');
+            plot(time{i}, gradient(T{i, j}(:, k)), 'LineWidth', 2, 'Color', 'yellow');
+        end
+        legend("Experimental", "Analytical", 'Location', 'best')
+        ylabel("Temperature (deg C)")
+        xlabel("Time (s)")
+        hold off;
+    end
+    hold off;
+    filename = 'SUBPLOTpart2transientplot';
+    if (j == 1)
+        filename = append(filename, "Model1A");
+    elseif(j == 2)
+        filename = append(filename, "Model1B");
+    elseif (j == 3)
+        filename = append(filename, "Model2");
+    end
+    ax = gca; 
+    set(ax, 'LooseInset', get(ax, 'TightInset'));
+    print(filename,'-r500','-dpng')
+end
+end
+
+steadyState = struct();
+
+
+
+for i = 1:num_files
+    if (i == 1 || i == 2 || i == 3 || i == 4)
+        steadyStateThreshold = 0.00003;
+    else 
+        steadyStateThreshold = 0.000075;
+    end
+    file_label = append(filenames(1, i), "_", filenames(2, i), "V_", filenames(3, i), "A");
+    file_label = strrep(file_label, ".", "p"); 
+    
+    time_vec = time{i}; 
+    
+    for j = 1:3
+        if (j == 1)
+            model_label = 'Model_1A';
+        elseif (j == 2)
+            model_label = 'Model_1B';
+        elseif (j == 3)
+            model_label = 'Model_2';
+        end
+        
+        channel_steady_times = nan(1, 8);
+        
+        for k = 1:8
+            temp_channel_k = T{i, j}(:, k);
+            
+            dTdt = abs(gradient(temp_channel_k, time_vec)) ;
+            
+            above_threshold_indices = find(dTdt > steadyStateThreshold);
+            
+            if isempty(above_threshold_indices)
+                steady_time = time_vec(1); % t = 0
+            else
+                last_unsteady_index = above_threshold_indices(end);
+                
+                if last_unsteady_index == length(time_vec)
+                    steady_time = NaN;
+                else
+                    steady_index = last_unsteady_index + 1;
+                    steady_time = time_vec(steady_index);
+                end
+            end
+            
+            channel_steady_times(k) = steady_time;
+        end
+        steadyState.(file_label).(model_label).('channel_ss_times') = channel_steady_times;
+        steadyState.(file_label).(model_label).('average') = mean(channel_steady_times);
+        timeSS(i, j) = mean(channel_steady_times);
+    end
+end
+
+if (plot3 == 1)
+for j=1:3
+    figure()
+    hold on;
+    if (j == 1)
+        sgtitle("Part 3 Analysis: Model 1A")
+    elseif (j == 2)
+        sgtitle("Part 3 Analysis: Model 3")
+    elseif(j == 3)
+        sgtitle("Part 3 Analysis: Model 2")
+    end
+    for i=1:num_files
+        givenTitle3 = append(" Mat: ", filenames(1, i), ' ', "Volt: ", filenames(2, i), ' ', "Current: ", filenames(3, i));
+        expMat = [data(i).CH1 data(i).CH2 data(i).CH3 data(i).CH4 data(i).CH5 data(i).CH6 data(i).CH7 data(i).CH8];
+        subplot(num_rows, num_cols, i)
+        hold on;
+        grid on;
+        box on;
+        title(givenTitle3);
+        for k = 1:8
+            plot(time{i}, expMat(:, k), 'LineWidth', 1.0, 'Color', 'blue')
+            plot(time{i}, T{i, j}(:, k), 'LineWidth', 1.2, 'Color', 'red');
+        end
+        xline(timeSS(i, j), 'y--', 'LineWidth', 1.5)
+        legend("Experimental", "Analytical", 'Location', 'best')
+        ylabel("Temperature (deg C)")
+        xlabel("Time (s)")
+        hold off;
+    end
+    hold off;
+    filename = 'SUBPLOTpart3transientplot';
+    if (j == 1)
+        filename = append(filename, "Model1A");
+    elseif(j == 2)
+        filename = append(filename, "Model3");
+    elseif (j == 3)
+        filename = append(filename, "Model2");
+    end
+    ax = gca; 
+    set(ax, 'LooseInset', get(ax, 'TightInset'));
+    print(filename,'-r500','-dpng')
+end
+end
+
+Fo = alpha_val .* timeSS(:, 2) ./ (5.875 * 0.0254)^2;
