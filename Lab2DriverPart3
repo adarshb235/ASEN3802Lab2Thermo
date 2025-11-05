@@ -113,8 +113,7 @@ T = cell(num_files, 3);
 
 
 for i = 1:num_files
-    %alpha_val = (k ./ rho ./ cp);
-    alpha_val = (k ./ rho ./ cp) .* [0.54; 0.54; 0.405; 0.405; 1.0275];
+    alpha_val = (k ./ rho ./ cp);
     L = max(distScale);
     T_dist = [CH1{1, i}(:) CH2{1, i}(:) CH3{1, i}(:) CH4{1, i}(:) CH5{1, i}(:) CH6{1, i}(:) CH7{1, i}(:) CH8{1, i}(:)];
     D  = 0.0254;
@@ -135,15 +134,18 @@ for i = 1:num_files
 
 
     for j = 1:3
+        if j == 2
+            alpha_val = (k ./ rho ./ cp) .* [0.54; 0.54; 0.405; 0.405; 1.0275];
+        end 
          expMat = [data(i).CH1 data(i).CH2 data(i).CH3 data(i).CH4 data(i).CH5 data(i).CH6 data(i).CH7 data(i).CH8];
-         if (plot2 == 1)
+         if (plot3 == 1)
          figure()
          hold on;
          grid on;
          box on;
          end
          for p = 1:8
-            if (plot2 == 1)
+            if (plot3 == 1)
             plot(time_vec, expMat(:, p), 'LineWidth', 1.3, 'Color', 'blue')
             plot([0 0.0000001], [0 0.00000001], 'red')
             end
@@ -172,18 +174,23 @@ for i = 1:num_files
 
             if (j == 1)
                 % Model IA uses H_an for the linear term
-                T{i, j}(l, :) = T_0(i) * ones(1, length(channelsDistScale))  + (H_an(i) * channelsDistScale) + sum;
-            elseif (j == 2)
+                    T{i, j}(l, :) = T_0(i) * ones(1, length(channelsDistScale))  + (H_an(i) * channelsDistScale) + sum;
+                
+          elseif (j == 2)
                 % Model IB and II use H_exp for the linear term
                 for p = 1:8
                     H_exp2 = (T_steady(i, p) - T_0(i)) / channelsDistScale(p);
                     T{i, j}(l, p) = T_0(i)  + (H_exp2 * channelsDistScale(p)) + sum(p);
                 end
             elseif (j == 3)
-                T{i, j}(l, :) = T_0(i) * ones(1, length(channelsDistScale))  + ((-M_ext(i) + H_exp(i)) * channelsDistScale) + sum;    
-            end
+                for p = 1:8 
+                    H_exp2 = (T_steady(i, p) - T_0(i)) / channelsDistScale(p);
+                    T{i, j}(l, p) = T_0(i)  + ((-M_ext(i) + H_exp2) * channelsDistScale(p)) + sum(p);    
+                end
          end
-    if (plot2 == 1)
+         end
+end
+    if (plot3 == 1)
     plot(time_vec, T{i, j}, '-', 'LineWidth', 1.8, 'Color', 'red');
     title(givenTitle2)
     legend('Experimental Data', 'Analytical Data', 'Location', 'best')
@@ -201,15 +208,19 @@ for i = 1:num_files
         filename = append(filename, code, "Model2");
     end
 
+    T_2{i, 1} = T{i, 2};
+
     if (plot2 == 1)
     ax = gca; 
     set(ax, 'LooseInset', get(ax, 'TightInset'));
     print(filename,'-r500','-dpng')
     end
     end   
-end
 
-if (plot2 == 1)
+
+
+
+if (plot3 == 1)
 for j=1:3
     figure()
     hold on;
@@ -231,13 +242,15 @@ for j=1:3
         for k = 1:8
             plot(time{i}, expMat(:, k), 'LineWidth', 1.0, 'Color', 'blue')
             plot(time{i}, T{i, j}(:, k), 'LineWidth', 1.2, 'Color', 'red');
-            plot(time{i}, gradient(T{i, j}(:, k)), 'LineWidth', 2, 'Color', 'yellow');
+            %plot(time{i}, gradient(T{i, j}(:, k)), 'LineWidth', 2, 'Color', 'green');
         end
         legend("Experimental", "Analytical", 'Location', 'best')
         ylabel("Temperature (deg C)")
         xlabel("Time (s)")
         hold off;
     end
+
+    if(plot2 == 1)
     hold off;
     filename = 'SUBPLOTpart2transientplot';
     if (j == 1)
@@ -250,6 +263,7 @@ for j=1:3
     ax = gca; 
     set(ax, 'LooseInset', get(ax, 'TightInset'));
     print(filename,'-r500','-dpng')
+    end
 end
 end
 
@@ -304,51 +318,40 @@ for i = 1:num_files
         steadyState.(file_label).(model_label).('channel_ss_times') = channel_steady_times;
         steadyState.(file_label).(model_label).('average') = mean(channel_steady_times);
         timeSS(i, j) = mean(channel_steady_times);
+        percentEval{i, j} = 100 * abs(1 - abs(mean(T{i, j}(steady_index, :))./mean(T_steady(i, :))));
+
     end
 end
 
-if (plot3 == 1)
-for j=1:3
-    figure()
+
+Fo = alpha_val .* timeSS(:, 2) ./ (5.875 * 0.0254)^2;
+
+
+figure()
+sgtitle("Final Thermocouple Time Comparison")
+for i = 1:num_files
+    expMat = [data(i).CH1 data(i).CH2 data(i).CH3 data(i).CH4 data(i).CH5 data(i).CH6 data(i).CH7 data(i).CH8];
+    subplot(num_rows, num_cols, i);
     hold on;
-    if (j == 1)
-        sgtitle("Part 3 Analysis: Model 1A")
-    elseif (j == 2)
-        sgtitle("Part 3 Analysis: Model 3")
-    elseif(j == 3)
-        sgtitle("Part 3 Analysis: Model 2")
-    end
-    for i=1:num_files
-        givenTitle3 = append(" Mat: ", filenames(1, i), ' ', "Volt: ", filenames(2, i), ' ', "Current: ", filenames(3, i));
-        expMat = [data(i).CH1 data(i).CH2 data(i).CH3 data(i).CH4 data(i).CH5 data(i).CH6 data(i).CH7 data(i).CH8];
-        subplot(num_rows, num_cols, i)
-        hold on;
-        grid on;
-        box on;
-        title(givenTitle3);
-        for k = 1:8
-            plot(time{i}, expMat(:, k), 'LineWidth', 1.0, 'Color', 'blue')
-            plot(time{i}, T{i, j}(:, k), 'LineWidth', 1.2, 'Color', 'red');
-        end
-        xline(timeSS(i, j), 'y--', 'LineWidth', 1.5)
-        legend("Experimental", "Analytical", 'Location', 'best')
-        ylabel("Temperature (deg C)")
-        xlabel("Time (s)")
-        hold off;
-    end
+    grid on;
+    box on;
+    lower = expMat(:, 8) - 2;
+    upper = expMat(:, 8) + 2;
+    fill([time{i}; flipud(time{i})], [lower; flipud(upper)], [0.8 0.8 0.8], 'EdgeColor', 'black', 'DisplayName', 'Error Band');
+    plot(time{i}, T{i, 1}(:, 8), 'r', 'LineWidth', 1.5);
+    plot(time{i}, T{i, 3}(:, 8), 'g--', 'LineWidth', 1.5);
+    plot(time{i}, T{i, 2}(:, 8), 'b-.', 'LineWidth', 1.5);
+    plot(time{i}, expMat(:, 8), 'k', 'LineWidth', 1.5);
+    legend('Confidence Bound', 'Model 1A', 'Model 2', 'Model 3', 'Experimental Data', 'Location', 'best')
+            givenTitle3 = append(" Mat: ", filenames(1, i), ' ', "Volt: ", filenames(2, i), ' ', "Current: ", filenames(3, i));
+    title(givenTitle3);
     hold off;
-    filename = 'SUBPLOTpart3transientplot';
-    if (j == 1)
-        filename = append(filename, "Model1A");
-    elseif(j == 2)
-        filename = append(filename, "Model3");
-    elseif (j == 3)
-        filename = append(filename, "Model2");
-    end
+end
+
+    filename = "Task3SUBPLOT";
     ax = gca; 
     set(ax, 'LooseInset', get(ax, 'TightInset'));
     print(filename,'-r500','-dpng')
-end
-end
 
-Fo = alpha_val .* timeSS(:, 2) ./ (5.875 * 0.0254)^2;
+
+
